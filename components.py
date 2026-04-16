@@ -7,22 +7,35 @@ from configuration import MemberProfile
 def _create_profile_sketch(profile: MemberProfile) -> cq.Sketch:
     """
     Internal helper function to draw the 2D cross-section of a steel member.
-    Allows you to easily add new shapes (box, angle iron) later.
     """
     sketch = cq.Sketch()
     
     if profile.shape == 'tube':
-        # dim_1 = Outer Diameter, dim_2 = Wall Thickness
-        outer_radius = profile.dim_1 / 2.0
-        inner_radius = outer_radius - profile.dim_2
+        # Safety check to ensure required dimensions exist
+        if profile.diameter is None or profile.wall_thickness is None:
+            raise ValueError("A 'tube' profile requires both 'diameter' and 'wall_thickness'.")
+            
+        outer_radius = profile.diameter / 2.0
+        inner_radius = outer_radius - profile.wall_thickness
         
         sketch = (
             sketch
             .circle(outer_radius)
-            .circle(inner_radius, mode='s') # 's' subtracts the inner circle to make it hollow
+            .circle(inner_radius, mode='s') # 's' subtracts
         )
-    elif profile.shape == 'solid_bar':
-        sketch = sketch.circle(profile.dim_1 / 2.0)
+        
+    elif profile.shape == 'solid_circle':
+        if profile.diameter is None:
+            raise ValueError("A 'solid_circle' profile requires a 'diameter'.")
+            
+        sketch = sketch.circle(profile.diameter / 2.0)
+        
+    elif profile.shape == 'rectangular':
+        if profile.width is None or profile.height is None:
+            raise ValueError("A 'rectangular' profile requires both 'width' and 'height'.")
+            
+        sketch = sketch.rect(profile.width, profile.height)
+        
     else:
         raise ValueError(f"Geometry for shape '{profile.shape}' is not yet implemented.")
         
@@ -37,7 +50,7 @@ def build_structural_member(length: float, profile: MemberProfile) -> cq.Workpla
     
     # Place the 2D sketch on the XY plane and extrude it along the Z-axis.
     # both=True ensures the origin is dead center, making rotation math much easier.
-    member = cq.Workplane("XY").placeSketch(sketch).extrude(length / 2.0, both=True)
+    member = cq.Workplane("XY").placeSketch(sketch).extrude(length, both=False)
     
     return member
 
@@ -66,7 +79,7 @@ if __name__ == "__main__":
     from configuration import MemberProfile
     
     # Test building a 100mm OD tube with 5mm walls, 2 meters long
-    test_profile = MemberProfile(shape='tube', dim_1=100.0, dim_2=5.0)
+    test_profile = MemberProfile(shape='tube', diameter=100.0, wall_thickness=5.0)
     test_tube = build_structural_member(length=2000.0, profile=test_profile)
     
     # Export to step to view in SolidWorks or another CAD viewer
