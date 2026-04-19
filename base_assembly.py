@@ -1,4 +1,6 @@
 # Imports
+from turtle import width
+
 import numpy as np
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -81,22 +83,32 @@ def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberP
         # Distance from center to the flat faces
         apothem = width / (2 * np.sqrt(3))
         
-        # Build the 2D panel (width is the side length)
-        # Note: Triangular masts usually use the same lacing pattern on all 3 sides
+        # Build the 2D panel
         panel_geom = build_2d_flat_panel(primary_lacing, width, length)
         
-        # Face 1: Bottom (Rotated 0 deg around Z, moved down by apothem)
+        # Face 1: Stand up, push out along Y
         face1 = panel_geom.rotate((0,0,0), (1,0,0), 90).translate((0, -apothem, 0))
         
-        # Face 2: Top Right (Rotated 120 deg around Z)
-        face2 = panel_geom.rotate((0,0,0), (1,0,0), 90).rotate((0,0,0), (0,0,1), 120).translate((0, -apothem, 0))
+        # Face 2: Stand up, push out along Y, THEN orbit 120 degrees around global Z
+        face2 = panel_geom.rotate((0,0,0), (1,0,0), 90).translate((0, -apothem, 0)).rotate((0,0,0), (0,0,1), 120)
         
-        # Face 3: Top Left (Rotated 240 deg around Z)
-        face3 = panel_geom.rotate((0,0,0), (1,0,0), 90).rotate((0,0,0), (0,0,1), 240).translate((0, -apothem, 0))
+        # Face 3: Stand up, push out along Y, THEN orbit 240 degrees around global Z
+        face3 = panel_geom.rotate((0,0,0), (1,0,0), 90).translate((0, -apothem, 0)).rotate((0,0,0), (0,0,1), 240)
         
         assembly = assembly.add(face1).add(face2).add(face3)
-    
     return assembly
+
+def stack_assembly_sections(sections: list[cq.Workplane]) -> cq.Workplane:
+    """
+    Takes a list of assembly sections and stacks them vertically with the specified spacing.
+    """
+    stacked = cq.Workplane("XY")
+    current_height = 0.0
+    for section in sections:
+        section_height = section.val().BoundingBox().zlen
+        stacked = stacked.add(section.translate((0, 0, current_height)))
+        current_height += section_height
+    return stacked
 
 
     
