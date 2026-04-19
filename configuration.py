@@ -48,8 +48,6 @@ class LacingStyle(Enum):
     INVERTED_V = auto()
     DIAGONAL_ONLY = auto()
 
-# 3. Define a reusable cross-section profile
-
 
 # 4. Define the main lacing configuration class
 @dataclass

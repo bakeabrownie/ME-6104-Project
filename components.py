@@ -4,16 +4,16 @@ from dataclasses import dataclass
 import cadquery as cq
 from configuration import MemberProfile
 
-def _create_profile_sketch(profile: MemberProfile) -> cq.Sketch:
+def create_profile_sketch(profile: MemberProfile) -> cq.Sketch:
     """
     Internal helper function to draw the 2D cross-section of a steel member.
     """
     sketch = cq.Sketch()
     
-    if profile.shape == 'tube':
+    if profile.shape == 'hollow_tube':
         # Safety check to ensure required dimensions exist
         if profile.diameter is None or profile.wall_thickness is None:
-            raise ValueError("A 'tube' profile requires both 'diameter' and 'wall_thickness'.")
+            raise ValueError("A 'hollow_tube' profile requires both 'diameter' and 'wall_thickness'.")
             
         outer_radius = profile.diameter / 2.0
         inner_radius = outer_radius - profile.wall_thickness
@@ -24,33 +24,55 @@ def _create_profile_sketch(profile: MemberProfile) -> cq.Sketch:
             .circle(inner_radius, mode='s') # 's' subtracts
         )
         
-    elif profile.shape == 'solid_circle':
+    elif profile.shape == 'solid_tube':
         if profile.diameter is None:
-            raise ValueError("A 'solid_circle' profile requires a 'diameter'.")
+            raise ValueError("A 'solid_tube' profile requires a 'diameter'.")
             
         sketch = sketch.circle(profile.diameter / 2.0)
         
-    elif profile.shape == 'rectangular':
+    elif profile.shape == 'solid_rectangle':
         if profile.width is None or profile.height is None:
-            raise ValueError("A 'rectangular' profile requires both 'width' and 'height'.")
+            raise ValueError("A 'solid_rectangle' profile requires both 'width' and 'height'.")
             
         sketch = sketch.rect(profile.width, profile.height)
+
+    elif profile.shape == "hollow_rectangle":
+        if profile.width is None or profile.height is None or profile.wall_thickness is None:
+            raise ValueError("A 'hollow_rectangle' profile requires 'width', 'height', and 'wall_thickness'.")
+        
+        outer_width = profile.width
+        outer_height = profile.height
+        inner_width = outer_width - 2 * profile.wall_thickness
+        inner_height = outer_height - 2 * profile.wall_thickness
+        
+        sketch = (
+            sketch
+            .rect(outer_width, outer_height)
+            .rect(inner_width, inner_height, mode='s') # 's' subtracts the inner rectangle
+        )
         
     else:
         raise ValueError(f"Geometry for shape '{profile.shape}' is not yet implemented.")
         
     return sketch
 
-def build_structural_member(length: float, profile: MemberProfile) -> cq.Workplane:
+def build_structural_member(length: float, profile: MemberProfile, x_offset: float = 0.0, y_offset: float = 0.0) -> cq.Workplane:
     """
     Builds a single beam or tube. 
-    Extrudes symmetrically so the center of mass remains exactly at (0, 0, 0).
+    Can be placed anywhere on the XY plane using x_offset and y_offset.
     """
-    sketch = _create_profile_sketch(profile)
+    sketch = create_profile_sketch(profile)
     
-    # Place the 2D sketch on the XY plane and extrude it along the Z-axis.
-    # both=True ensures the origin is dead center, making rotation math much easier.
-    member = cq.Workplane("XY").placeSketch(sketch).extrude(length, both=False)
+    # 1. Select the XY plane
+    # 2. Move the center to the specified (x, y) coordinates
+    # 3. Place the 2D sketch there
+    # 4. Extrude it upwards along the Z-axis
+    member = (
+        cq.Workplane("XY")
+        .center(x_offset, y_offset)
+        .placeSketch(sketch)
+        .extrude(length, both=False)
+    )
     
     return member
 
@@ -72,16 +94,3 @@ def build_end_plate(width: float, thickness: float, hole_dia: float, hole_margin
     )
     
     return plate
-
-# --- Quick Test Block ---
-# If you run this specific file, it will generate a test part to verify your logic
-if __name__ == "__main__":
-    from configuration import MemberProfile
-    
-    # Test building a 100mm OD tube with 5mm walls, 2 meters long
-    test_profile = MemberProfile(shape='tube', diameter=100.0, wall_thickness=5.0)
-    test_tube = build_structural_member(length=2000.0, profile=test_profile)
-    
-    # Export to step to view in SolidWorks or another CAD viewer
-    cq.exporters.export(test_tube, 'test_tube.step')
-    print("Exported test_tube.step successfully.")
