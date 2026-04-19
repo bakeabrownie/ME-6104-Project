@@ -44,11 +44,27 @@ def create_profile_sketch(profile: MemberProfile) -> cq.Sketch:
         outer_height = profile.height
         inner_width = outer_width - 2 * profile.wall_thickness
         inner_height = outer_height - 2 * profile.wall_thickness
+        outer_radius = 2*profile.wall_thickness
+        inner_radius = profile.wall_thickness
         
-        sketch = (
-            sketch
+        outie = (
+            cq.Sketch("XY")
             .rect(outer_width, outer_height)
-            .rect(inner_width, inner_height, mode='s') # 's' subtracts the inner rectangle
+            .vertices()
+            .fillet(outer_radius)
+        )
+
+        innie = (
+            cq.Sketch("XY")
+            .rect(inner_width, inner_height)
+            .vertices()
+            .fillet(inner_radius)
+        )
+
+        sketch = (
+            cq.Sketch()
+            .face(outie)
+            .face(innie, mode='s')
         )
         
     else:

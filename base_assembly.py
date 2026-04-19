@@ -44,7 +44,7 @@ def create_truss_base(base_length: float, member_profile: MemberProfile, macro_g
     for coord in corner_coords:
         member = build_structural_member(base_length, member_profile, coord[0], coord[1])
         base_assembly = base_assembly.add(member)
-    return base_assembly
+    return base_assembly, corner_coords
 
 def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberProfile, primary_lacing: LacingConfig, secondary_lacing: LacingConfig) -> cq.Workplane:
     length = macro_geometry.length
@@ -53,7 +53,8 @@ def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberP
     half_width = width / 2.0
     half_depth = depth / 2.0
 
-    assembly = create_truss_base(length, member_profile, macro_geometry) # Your 4 corner posts
+
+    assembly, corner_coords = create_truss_base(length, member_profile, macro_geometry) # Your 4 corner posts
     
     if macro_geometry.cross_section_shape == MastGeometry.RECTANGULAR or macro_geometry.cross_section_shape == MastGeometry.SQUARE:
         # 1. Front Face (No Z-rotation needed, just stand it up)
@@ -96,6 +97,59 @@ def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberP
         face3 = panel_geom.rotate((0,0,0), (1,0,0), 90).translate((0, -apothem, 0)).rotate((0,0,0), (0,0,1), 240)
         
         assembly = assembly.add(face1).add(face2).add(face3)
+
+    assembly = assembly.union()
+
+    #'cutting' tools to remove web material from chord interior if hollow
+    if member_profile.shape == 'hollow_rectangle':
+
+        inner_width = member_profile.width - 2 * member_profile.wall_thickness
+        inner_height = member_profile.height - 2 * member_profile.wall_thickness
+        inner_radius = member_profile.wall_thickness
+
+        cutter_sketch = (
+            cq.Sketch("XY")
+            .rect(inner_width, inner_height)
+            .vertices()
+            .fillet(inner_radius)
+        )
+        cutter = cq.Workplane("XY")
+        for corner in corner_coords:
+            inner = (
+                cq.Workplane("XY")
+                .center(corner[0], corner[1])
+                .placeSketch(cutter_sketch)
+                .extrude(macro_geometry.length)
+            )
+            cutter = cutter.add(inner)
+
+        assembly = assembly.cut(cutter)
+
+
+    if member_profile.shape == 'hollow_tube':
+
+        outer_radius = member_profile.diameter / 2.0
+        inner_radius = outer_radius - member_profile.wall_thickness
+
+        cutter_sketch = (
+            cq.Sketch()
+            .circle(inner_radius)
+        )
+        cutter = cq.Workplane("XY")
+        for corner in corner_coords:
+            inner = (
+                cq.Workplane("XY")
+                .center(corner[0], corner[1])
+                .placeSketch(cutter_sketch)
+                .extrude(macro_geometry.length)
+            )
+            cutter = cutter.add(inner)
+
+        assembly = assembly.cut(cutter)
+
+    
+
+
     return assembly
 
 def stack_assembly_sections(sections: list[cq.Workplane]) -> cq.Workplane:

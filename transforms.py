@@ -43,7 +43,7 @@ def build_strut(pt1: tuple, pt2: tuple, profile: MemberProfile) -> cq.Workplane:
     strut = (
         cq.Workplane(strut_plane)
         .placeSketch(sketch)
-        .extrude(distance)
+        .extrude(distance, combine=True)
     )
     
     # 6. Move the newly created strut from the origin to pt1
@@ -61,8 +61,9 @@ def build_2d_flat_panel(lacing: LacingConfig, panel_width: float, panel_height: 
     bay_length = lacing.calculate_bay_length(panel_height)
     
     for i in range(lacing.num_bays):
-        y_bottom = i * bay_length
-        y_top = (i + 1) * bay_length
+        y_bottom = i * bay_length + 0.1*bay_length
+        y_top = (i + 1) * bay_length + 0.1*bay_length
+
         
         # Grid coordinates
         bottom_left = (-half_width, y_bottom, 0)
@@ -92,5 +93,13 @@ def build_2d_flat_panel(lacing: LacingConfig, panel_width: float, panel_height: 
         # (to avoid overlapping the bottom of the next bay)
         if lacing.has_horizontal_struts and lacing.horizontal_profile:
             panel = panel.add(build_strut(top_left, top_right, lacing.horizontal_profile))
+
+        #Add top and bottom "cap" struts if specified (horizontal strut but only at top/bottom of section)
+        if lacing.has_cap_struts and lacing.cap_strut_profile:
+            if i == 0:
+                panel = panel.add(build_strut(bottom_left, bottom_right, lacing.cap_strut_profile))
+            if i == lacing.num_bays - 1:
+                if lacing.has_horizontal_struts == False:
+                    panel = panel.add(build_strut(top_left, top_right, lacing.cap_strut_profile))
 
     return panel

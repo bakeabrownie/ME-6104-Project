@@ -57,8 +57,10 @@ class LacingConfig:
     diagonal_profile: MemberProfile
     has_horizontal_struts: bool = False
     horizontal_profile: Optional[MemberProfile] = None
+    has_cap_struts: Optional[bool] = False
+    cap_strut_profile: Optional[MemberProfile] = None
     eccentricity_offset: float = 0.0
 
     def calculate_bay_length(self, total_mast_length: float) -> float:
         """Helper method to determine the base width of a single repeating bay."""
-        return total_mast_length / self.num_bays
+        return total_mast_length*.98 / self.num_bays        #.99*total_mast_length for minor offset
