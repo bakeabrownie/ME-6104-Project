@@ -9,7 +9,7 @@ print("Imported viewer...")
 from configuration import MastGeometry, MemberProfile, MacroGeometry, LacingConfig, LacingStyle, Units
 print("Imported configuration...")
 
-from base_assembly import assemble_mast_section, create_truss_base, stack_assembly_sections
+from assembly import assemble_mast_section, create_truss_base, stack_assembly_sections
 
 print("Imported base_assembly...")
 
@@ -26,15 +26,15 @@ corner_profile = MemberProfile(shape='hollow_tube', diameter=10*25.4, wall_thick
 macro_geometry = MacroGeometry(length=489.0*25.4, width=96.0*25.4, height=96.0*25.4, main_chord_profile=corner_profile, cross_section_shape=MastGeometry.RECTANGULAR)
 print("Defined macro geometry and corner profile...")
 
-#primary lacing definition, inverted v pattern, horizontal webbing profile solid rectangle, diagonal webbing profile solid rectangle
-primary_lacing = LacingConfig(style=LacingStyle.INVERTED_V, num_bays=8, diagonal_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4), has_horizontal_struts=True, horizontal_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4), has_cap_struts=True, cap_strut_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4))
-print("Defined primary lacing pattern...")
+#primary bracing definition, inverted v pattern, horizontal webbing profile solid rectangle, diagonal webbing profile solid rectangle
+primary_bracing = BracingConfig(style=BracingStyle.INVERTED_V, num_bays=8, diagonal_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4), has_horizontal_struts=True, horizontal_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4), has_cap_struts=True, cap_strut_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4))
+print("Defined primary bracing pattern...")
 
-#secondary lacing definition, x brace pattern, webbing profile solid rectangle
-secondary_lacing = LacingConfig(style=LacingStyle.WARREN, num_bays=8, diagonal_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4), has_cap_struts=True, cap_strut_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4))
+#secondary bracing definition, x brace pattern, webbing profile solid rectangle
+secondary_bracing = BracingConfig(style=BracingStyle.WARREN, num_bays=8, diagonal_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4), has_cap_struts=True, cap_strut_profile=MemberProfile(shape='hollow_rectangle', width=5*25.4, height=5*25.4, wall_thickness=0.500*25.4))
 
 #create truss section by adding in corner posts
-mast_base = assemble_mast_section(macro_geometry, corner_profile, primary_lacing, secondary_lacing)
+mast_base = assemble_mast_section(macro_geometry, corner_profile, primary_bracing, secondary_bracing)
 show(mast_base, alpha = 0.5, fxaa=False)
 
 #two_masts = stack_assembly_sections([mast_base, mast_base]) # Stack two sections for a taller mast
