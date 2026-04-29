@@ -1,5 +1,5 @@
 import cadquery as cq
-from configuration import LacingConfig, MacroGeometry, MemberProfile, LacingStyle
+from configuration import BracingConfig, MacroGeometry, MemberProfile, BracingStyle
 import numpy as np
 from components import create_profile_sketch
 
@@ -49,18 +49,18 @@ def build_strut(pt1: tuple, pt2: tuple, profile: MemberProfile) -> cq.Workplane:
     # 6. Move the newly created strut from the origin to pt1
     return strut.translate(v1)
 
-def build_2d_flat_panel(lacing: LacingConfig, panel_width: float, panel_height: float) -> cq.Workplane:
+def build_2d_flat_panel(bracing: BracingConfig, panel_width: float, panel_height: float) -> cq.Workplane:
     """
     Builds a flat 2D panel where width and height are local to the panel itself.
     """
     half_width = panel_width / 2.0
-    lacing_style = lacing.style
+    bracing_style = bracing.style
     panel = cq.Workplane("XY")
     
     # Calculate vertical spacing
-    bay_length = lacing.calculate_bay_length(panel_height)
+    bay_length = bracing.calculate_bay_length(panel_height)
     
-    for i in range(lacing.num_bays):
+    for i in range(bracing.num_bays):
         y_bottom = i * bay_length + 0.1*bay_length
         y_top = (i + 1) * bay_length + 0.1*bay_length
 
@@ -72,34 +72,34 @@ def build_2d_flat_panel(lacing: LacingConfig, panel_width: float, panel_height: 
         top_right = (half_width, y_top, 0)
         
         # --- Pattern Logic ---
-        if lacing_style == LacingStyle.X_BRACE:
-            s1 = build_strut(bottom_left, top_right, lacing.diagonal_profile)
-            s2 = build_strut(bottom_right, top_left, lacing.diagonal_profile)
+        if bracing_style == BracingStyle.X_BRACE:
+            s1 = build_strut(bottom_left, top_right, bracing.diagonal_profile)
+            s2 = build_strut(bottom_right, top_left, bracing.diagonal_profile)
             panel = panel.add(s1.union(s2))
             
-        elif lacing_style == LacingStyle.WARREN:
+        elif bracing_style == BracingStyle.WARREN:
             start, end = (bottom_left, top_right) if i % 2 == 0 else (bottom_right, top_left)
-            panel = panel.add(build_strut(start, end, lacing.diagonal_profile))
+            panel = panel.add(build_strut(start, end, bracing.diagonal_profile))
             
-        elif lacing_style == LacingStyle.INVERTED_V:
+        elif bracing_style == BracingStyle.INVERTED_V:
             top_mid = (0, y_top, 0)
-            panel = panel.add(build_strut(bottom_left, top_mid, lacing.diagonal_profile))
-            panel = panel.add(build_strut(bottom_right, top_mid, lacing.diagonal_profile))
+            panel = panel.add(build_strut(bottom_left, top_mid, bracing.diagonal_profile))
+            panel = panel.add(build_strut(bottom_right, top_mid, bracing.diagonal_profile))
             
-        elif lacing_style == LacingStyle.DIAGONAL_ONLY:
-            panel = panel.add(build_strut(bottom_left, top_right, lacing.diagonal_profile))
+        elif bracing_style == BracingStyle.DIAGONAL_ONLY:
+            panel = panel.add(build_strut(bottom_left, top_right, bracing.diagonal_profile))
 
         # Add horizontal struts only if needed and only at the top of the bay 
         # (to avoid overlapping the bottom of the next bay)
-        if lacing.has_horizontal_struts and lacing.horizontal_profile:
-            panel = panel.add(build_strut(top_left, top_right, lacing.horizontal_profile))
+        if bracing.has_horizontal_struts and bracing.horizontal_profile:
+            panel = panel.add(build_strut(top_left, top_right, bracing.horizontal_profile))
 
         #Add top and bottom "cap" struts if specified (horizontal strut but only at top/bottom of section)
-        if lacing.has_cap_struts and lacing.cap_strut_profile:
+        if bracing.has_cap_struts and bracing.cap_strut_profile:
             if i == 0:
-                panel = panel.add(build_strut(bottom_left, bottom_right, lacing.cap_strut_profile))
-            if i == lacing.num_bays - 1:
-                if lacing.has_horizontal_struts == False:
-                    panel = panel.add(build_strut(top_left, top_right, lacing.cap_strut_profile))
+                panel = panel.add(build_strut(bottom_left, bottom_right, bracing.cap_strut_profile))
+            if i == bracing.num_bays - 1:
+                if bracing.has_horizontal_struts == False:
+                    panel = panel.add(build_strut(top_left, top_right, bracing.cap_strut_profile))
 
     return panel

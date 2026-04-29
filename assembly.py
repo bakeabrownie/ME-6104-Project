@@ -1,12 +1,10 @@
 # Imports
-from turtle import width
-
 import numpy as np
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
 import cadquery as cq
-from configuration import LacingConfig, MacroGeometry, MastGeometry, MemberProfile
+from configuration import BracingConfig, MacroGeometry, MastGeometry, MemberProfile
 from components import build_structural_member
 from transforms import build_strut, build_2d_flat_panel
 
@@ -46,7 +44,7 @@ def create_truss_base(base_length: float, member_profile: MemberProfile, macro_g
         base_assembly = base_assembly.add(member)
     return base_assembly, corner_coords
 
-def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberProfile, primary_lacing: LacingConfig, secondary_lacing: LacingConfig) -> cq.Workplane:
+def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberProfile, primary_bracing: BracingConfig, secondary_bracing: BracingConfig) -> cq.Workplane:
     length = macro_geometry.length
     width = macro_geometry.width
     depth = macro_geometry.height
@@ -58,23 +56,23 @@ def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberP
     
     if macro_geometry.cross_section_shape == MastGeometry.RECTANGULAR or macro_geometry.cross_section_shape == MastGeometry.SQUARE:
         # 1. Front Face (No Z-rotation needed, just stand it up)
-        front_panel = build_2d_flat_panel(primary_lacing, width, length) # Build the 2D panel for the front face)
+        front_panel = build_2d_flat_panel(primary_bracing, width, length) # Build the 2D panel for the front face)
         front_panel = front_panel.rotate((0,0,0), (1,0,0), 90).translate((0, -half_depth, 0))
         assembly = assembly.add(front_panel)
         
         # 2. Right Face (Rotate 90 degrees around Z)
-        right_panel = build_2d_flat_panel(secondary_lacing, depth, length)
+        right_panel = build_2d_flat_panel(secondary_bracing, depth, length)
         right_panel = right_panel.rotate((0,0,0), (1,0,0), 90) # Stand up
         right_panel = right_panel.rotate((0,0,0), (0,0,1), 90).translate((half_width, 0, 0)) # Rotate to side
         assembly = assembly.add(right_panel)
         
         # ... Repeat for Back (180 deg) and Left (270 deg)
-        back_panel = build_2d_flat_panel(primary_lacing, width, length)
+        back_panel = build_2d_flat_panel(primary_bracing, width, length)
         back_panel = back_panel.rotate((0,0,0), (1,0,0), 90) # Stand up
         back_panel = back_panel.rotate((0,0,0), (0,0,1), 180).translate((0, half_depth, 0))
         assembly = assembly.add(back_panel)
         # 4. Left Face (Rotate 270 degrees around Z)
-        left_panel = build_2d_flat_panel(secondary_lacing, depth, length)
+        left_panel = build_2d_flat_panel(secondary_bracing, depth, length)
         left_panel = left_panel.rotate((0,0,0), (1,0,0), 90) # Stand up
         left_panel = left_panel.rotate((0,0,0), (0,0,1), 270).translate((-half_width, 0, 0))
         assembly = assembly.add(left_panel)
@@ -85,7 +83,7 @@ def assemble_mast_section(macro_geometry: MacroGeometry, member_profile: MemberP
         apothem = width / (2 * np.sqrt(3))
         
         # Build the 2D panel
-        panel_geom = build_2d_flat_panel(primary_lacing, width, length)
+        panel_geom = build_2d_flat_panel(primary_bracing, width, length)
         
         # Face 1: Stand up, push out along Y
         face1 = panel_geom.rotate((0,0,0), (1,0,0), 90).translate((0, -apothem, 0))

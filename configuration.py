@@ -41,18 +41,18 @@ class MacroGeometry:
     taper_angle: float = 0.0          # Default to 0 for straight tower masts
     cross_section_shape: MastGeometry = MastGeometry.SQUARE
 
-# 2. Define the allowed lacing patterns
-class LacingStyle(Enum):
+# 2. Define the allowed bracing patterns
+class BracingStyle(Enum):
     WARREN = auto()
     X_BRACE = auto()
     INVERTED_V = auto()
     DIAGONAL_ONLY = auto()
 
 
-# 4. Define the main lacing configuration class
+# 4. Define the main bracing configuration class
 @dataclass
-class LacingConfig:
-    style: LacingStyle
+class BracingConfig:
+    style: BracingStyle
     num_bays: int
     diagonal_profile: MemberProfile
     has_horizontal_struts: bool = False
